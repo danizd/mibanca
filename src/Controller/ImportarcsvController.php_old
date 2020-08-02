@@ -1,0 +1,147 @@
+<?php
+namespace App\Controller;
+
+use App\Controller\AppController;
+use Cake\ORM\TableRegistry;
+use App\Model\Table\User; // <—My model
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Helper;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use PhpOffice\PhpSpreadsheet\IOFactory;
+use Cake\Network\Session\DatabaseSession;
+
+/**
+ * Importarcsv Controller
+ *
+ *
+ * @method \App\Model\Entity\Importarcsv[]|\Cake\Datasource\ResultSetInterface paginate($object = null, array $settings = [])
+ */
+class ImportarcsvController extends AppController
+{
+
+  /**
+   * Index method
+   *
+   * @return \Cake\Http\Response|null
+   */
+  public function subearchivo()
+  {
+
+    $uploadData = '';
+    $this->set(compact('uploadData'));
+    if ($this->request->is('post')) {
+      $valida_csv = $this->chkFileExtension($this->request->data);
+      if ($valida_csv == true){
+        $fileName = $this->request->data['file']['name'];
+        $uploadFile = $uploadPath.$fileName;
+
+        if(move_uploaded_file($this->request->data['file']['tmp_name'], WWW_ROOT . 'files/csv' . DS . $fileName)){
+          $this->Flash->success(__('El archivo ha sido guardado.'));
+          return $this->redirect(array('action' => 'view'));
+        }else{
+            $this->Flash->error(__('Archivo incorrecto'));
+        }
+
+      }else{
+        $this->Flash->error(__('No es un archivo CSV'));
+      }
+    }
+  }
+
+
+
+  public function ver($id = null)
+  {
+
+
+    # El archivo a importar
+    # Recomiendo poner la ruta absoluta si no está junto al script
+
+
+    $rutaArchivo = WWW_ROOT . 'files\csv' . DS;
+    $csv = $this->leercsv($rutaArchivo);
+    $this->set(compact('csv'));
+
+
+
+  }
+
+private function leercsv($rutaArchivo){
+    $files = scandir($rutaArchivo, SCANDIR_SORT_DESCENDING);
+    $newest_file = $files[0];
+    $documento = IOFactory::load($rutaArchivo.$newest_file);
+    # Se espera que en la primera hoja estén los productos
+    $hojaDeMovimientos = $documento->getSheet(0);
+    # Calcular el máximo valor de la fila como entero, es decir, el
+    # límite de nuestro ciclo
+    $numeroMayorDeFila = $hojaDeMovimientos->getHighestRow(); // Numérico
+    $letraMayorDeColumna = $hojaDeMovimientos->getHighestColumn(); // Letra
+    # Convertir la letra al número de columna correspondiente
+    $numeroMayorDeColumna = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::columnIndexFromString($letraMayorDeColumna);
+    $numeroMayorDeColumna = 10;
+    $csv = array();
+
+    // Recorrer filas; comenzar en la fila 2 porque omitimos el encabezado
+    for ($indiceFila = 2; $indiceFila <= $numeroMayorDeColumna; $indiceFila++) {
+
+      # Las columnas están en este orden:
+      $concepto = $hojaDeMovimientos->getCellByColumnAndRow(3, $indiceFila)->getValue();
+      $conceptoAmpliado = $hojaDeMovimientos->getCellByColumnAndRow(8, $indiceFila)->getValue();
+      $importesin = $hojaDeMovimientos->getCellByColumnAndRow(4, $indiceFila)->getValue();
+      $importe = str_replace(',', '.', $importesin);
+      $fechaCtble = date("Y-m-d", strtotime($hojaDeMovimientos->getCellByColumnAndRow(1, $indiceFila)) );
+      $categoria = '';//searchByValue($concepto, $array_mov);
+      $csv[] = array('concepto' => $concepto,
+                     'conceptoAmpliado' => $conceptoAmpliado,
+                     'importe' => $importe,
+                     'fechaCtble' => $fechaCtble,
+                     'categoria' => $categoria,
+             );
+
+
+    }
+    return $csv;
+}
+
+  public function import()
+  {
+
+    $csv = $this->request->session()->read('csv');
+
+
+
+
+
+    foreach ($csv as $key => $value) {
+      $format_fecha = explode('-', $value['fechaCtble']);
+      $value['fechaCtble'] = array(
+        'year' =>$format_fecha[0],
+        'month' =>$format_fecha[1],
+        'day' =>$format_fecha[2]
+      );
+
+      $movimiento = $this->Movimientos->newEntity();
+      $movimiento = $this->Movimientos->patchEntity($movimiento, $value);
+      $this->Movimientos->save($movimiento)
+      $this->Flash->success(__('Los datos del CSV han sido importados.'));
+      return $this->redirect( ['controller' => 'Movimientos', 'action' => 'index']);
+
+
+    }
+
+
+
+
+
+
+
+
+  }
+
+
+
+
+
+
+
+}
