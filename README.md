@@ -10,3 +10,8 @@ Para ello:
 - Permite ver las importes totales por mes de cada una de las categorías.
 
 
+
+Instalación
+Situado en la raiz del proyecto ejecutar en consola "composer install"
+
+

@@ -30,8 +30,9 @@ class MovimientosController extends AppController
         $this->paginate = [
             'contain' => ['Categorias'],
         ];
+		$archivos = array();
         $movimientos = $this->paginate($this->Movimientos);
-        $rutaArchivo = WWW_ROOT . 'files\csv' . DS;
+        $rutaArchivo = WWW_ROOT . 'files/csv' . DS;
         $files = scandir($rutaArchivo, SCANDIR_SORT_DESCENDING);
         foreach ($files as $key => $file) {
           if (strpos($file, '_importado') !== false) {
