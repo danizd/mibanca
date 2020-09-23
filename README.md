@@ -11,7 +11,10 @@ Para ello:
 
 
 
-Instalación
-Situado en la raiz del proyecto ejecutar en consola "composer install"
+Instalación:
+
+- Duplicar archivo "app.default.php" y renombar a app.php
+- Configurar bbdd en línea 254 y siguientes
+- Situado en la raiz del proyecto ejecutar en consola "composer install"
 
 
